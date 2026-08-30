@@ -1,0 +1,272 @@
+// 她测 HerSafe QA · 核心数据模型（PRD §4，v0 十大对象）
+// 说明：SQLite 不支持 Prisma 枚举，状态字段统一使用 String，
+// 合法值由 lib/types.ts 中的 zod Schema 在代码层强校验。
+// 命名与 PRD 对象名严格对齐（ROADMAP §6.2）：AuditProject、ReviewTodo、Finding 等不得另造同义词。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 审查项目
+model AuditProject {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  // created（已创建）| analyzing（初始分析中）| analyzed（已完成初始分析）
+  status      String   @default("created")
+  // 预算配置：用户/项目/每日三档（PRD §7.1）
+  budgetConfig Json?
+  // ===== 产品画像（新版：女性健康定位，tace.md §4 步骤1）=====
+  productType     String? // period_tracking | fertility_ttc | pregnancy | postpartum | maternal_mental | general_health | other
+  targetAudience  Json?   // 目标人群标签 string[]
+  coreTasks       Json?   // 核心任务 string[]
+  healthClaims    Json?   // 健康主张 string[]，如「预测易孕期」
+  sensitiveData   Json?   // 敏感数据枚举数组
+  userRoles       Json?   // owner | partner | family_member | clinician
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  artifacts       InputArtifact[]
+  evidencePackage EvidencePackage?
+  todos           ReviewTodo[]
+  findings        Finding[]
+  evidenceUpdates EvidenceUpdate[]
+  packs           ProjectPack[]
+  modelInvocations ModelInvocation[]
+}
+
+// 项目 × 规则包绑定（含确定性推荐原因，支撑「选规则包并解释适用原因」验收项）
+model ProjectPack {
+  id             String       @id @default(cuid())
+  projectId      String
+  project        AuditProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  packCode       String       // BASE | MENS | PREG | HDAI
+  ruleSetVersion String       // 绑定时的 RULESET_VERSION 快照
+  reason         String       // 确定性推荐文案（展示给用户）
+  recommended    Boolean      @default(false) // 是否系统推荐
+  selectedByUser Boolean      @default(true)  // 是否被用户采纳
+  createdAt      DateTime     @default(now())
+
+  @@unique([projectId, packCode])
+}
+
+// 规则登记表（编写源头为 lib/rules/data/v1 的 TS 文件，seed 时镜像入库；
+// 供规则服务查询与 Finding 外键完整性校验）
+model Rule {
+  key       String   @id // 全局唯一规则编号，如 MENS-PRIV-001
+  packCode  String
+  dimension String // 六维之一
+  version   String // 内容版本，如 v1.0.0
+  title     String
+  status    String   @default("draft") // draft 未复核 | reviewed 已专家复核
+  body      Json // 完整 RuleV1 结构
+  active    Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+// 评测运行记录（质量指标落地，tace.md §10.1）
+model EvalRun {
+  id             String   @id @default(cuid())
+  evalSetVersion String
+  model          String
+  promptVersion  String
+  ruleSetVersion String
+  metrics        Json // 八项指标结果
+  cases          Json // 逐案例期望 vs 实际摘要
+  createdAt      DateTime @default(now())
+}
+
+// 输入材料（url/image/pdf/docx/md/txt）
+model InputArtifact {
+  id        String   @id @default(cuid())
+  projectId String
+  project   AuditProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  type      String
+  // 来源地址：URL 或原始文件名
+  sourceRef String
+  // 本地存储相对路径（data/uploads/ 下）
+  storagePath String?
+  // 感知哈希（去重用，PRD F1.4）
+  pHash     String?
+  // 解析产物：提取文本、页面数、OCR 结果、缩略引用等
+  parseOutput Json?
+  // pending | parsing | parsed | failed | deduped
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+}
+
+// 产品证据包（PRD F1.5）
+model EvidencePackage {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  project   AuditProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  pages         Json
+  controls      Json
+  userTasks     Json
+  pageRelations Json
+  docRules      Json
+  sourceIndex   Json
+  version       String   @default("v0")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  coverage InteractionCoverage?
+}
+
+// 交互覆盖（独立对象，PRD §4）
+model InteractionCoverage {
+  id        String @id @default(cuid())
+  packageId String @unique
+  pkg       EvidencePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  // 已覆盖交互 / 未覆盖交互 / 图层映射
+  covered        Json
+  uncovered      Json
+  controlMapping Json
+  updatedAt      DateTime @updatedAt
+}
+
+// 待办（ReviewTodo）
+model ReviewTodo {
+  id        String @id @default(cuid())
+  projectId String
+  project   AuditProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title    String
+  // high | medium | low
+  priority String @default("medium")
+  // 提出原因
+  reason   String
+  // 关联证据引用（指向 EvidencePackage.sourceIndex 键）
+  evidenceRefs Json
+  findingId String?
+  finding   Finding? @relation(fields: [findingId], references: [id], onDelete: SetNull)
+  // 状态机（PRD §4）：
+  // pending 待处理 | in_chat 对话中 | awaiting_confirm 待确认写入 | re_evaluating 重新评估中
+  // | done 已完成 | needs_manual 需人工确认 | retryable_error 可重试错误
+  status String @default("pending")
+  // 关联规则（规则库 rule_id）
+  ruleId String?
+  // AI 追问轮次（上限 3，PRD F3.4）
+  aiRounds Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversation    TodoConversation?
+  evidenceUpdates EvidenceUpdate[]
+}
+
+// 待办独立对话线程（不同待办互不串线，PRD F3.3）
+model TodoConversation {
+  id     String @id @default(cuid())
+  todoId String @unique
+  todo   ReviewTodo @relation(fields: [todoId], references: [id], onDelete: Cascade)
+
+  // 消息列表 [{role, content, round, kind, createdAt}]
+  messages       Json @default("[]")
+  // 上下文摘要（增量调用只发送摘要，不发送全量）
+  contextSummary String?
+  updatedAt      DateTime @updatedAt
+}
+
+// 用户确认后的结构化证据（事务写入，PRD F4.2）
+model EvidenceUpdate {
+  id        String @id @default(cuid())
+  projectId String
+  project   AuditProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  todoId    String
+  todo      ReviewTodo @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  findingId String
+  finding   Finding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  // 更新前/后状态快照（可追溯）
+  beforeState Json
+  afterState  Json
+  // 拟写入证据摘要
+  summary     String
+  confirmedBy String?
+  // pending | committed | rolled_back
+  txStatus    String @default("pending")
+  createdAt   DateTime @default(now())
+}
+
+// 风险发现
+model Finding {
+  id        String @id @default(cuid())
+  projectId String
+  project   AuditProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title String
+  // 六类结论：confirmed_risk | unverified_risk | requirement_gap | protected | not_applicable | baseline_issue（tace.md §6.2）
+  type   String
+  // high | medium | low
+  severity String @default("medium")
+  // 六维度：health_safety | autonomy | privacy_control | dignity | equity | help_redress
+  dimension String?
+  ruleId    String?
+  // 判定时所用规则内容版本快照（可追溯，tace.md §7.1）
+  ruleVersion String?
+  // 置信度 high | medium | low —— 证据充分程度（与严重度=潜在后果分离，tace.md §6.1）
+  confidence String?
+  confidenceReason String?
+  // type=not_applicable 时必填：命中的不适用条件
+  naBasis String?
+  // 材料来源
+  sources        Json
+  // 观察事实 / 用户确认事实 / 模型推断（三类事实严格区分，PRD F4.5）
+  observedFacts  Json
+  confirmedFacts Json
+  modelInference String?
+  // 修改建议
+  suggestion String?
+  // hypothesis 初始假设 → pending_verify 待验证 → 终态（可被新证据经新待办重新打开）
+  status     String @default("hypothesis")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  todos           ReviewTodo[]
+  evidenceUpdates EvidenceUpdate[]
+  testCases       TestCase[]
+}
+
+// Given-When-Then 测试用例（PRD F4.5）
+model TestCase {
+  id        String @id @default(cuid())
+  findingId String
+  finding   Finding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  given     String
+  whenText  String
+  thenText  String
+  createdAt DateTime @default(now())
+}
+
+// 模型调用记录（PRD §5.7，保证结论可复现可回归）
+model ModelInvocation {
+  id      String @id @default(cuid())
+  projectId String?
+  project   AuditProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // analyzeProject | continueTodo | verifyHighRisk（网关三函数）
+  functionName String
+  model        String
+  promptVersion  String
+  ruleVersion    String
+  schemaVersion  String
+  inputHash    String
+  tokens       Json?
+  latencyMs    Int?
+  cost         Float  @default(0)
+  cacheHit     Boolean @default(false)
+  // 结果是否被用户采用
+  adopted      Boolean @default(false)
+  result       Json?
+  createdAt    DateTime @default(now())
+
+  @@index([projectId, functionName, createdAt])
+}

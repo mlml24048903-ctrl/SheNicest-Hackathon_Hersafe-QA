@@ -1,0 +1,37 @@
+# 依赖与构建产物
+node_modules/
+.next/
+out/
+dist/
+
+# 环境变量与密钥（永不入库）
+.env
+.env.local
+.env.*.local
+
+# 数据库与运行时数据
+*.db
+*.db-journal
+prisma/dev.db
+data/uploads/*
+!data/uploads/.gitkeep
+
+# 测试与报告
+test-results/
+playwright-report/
+coverage/
+
+# IDE 与系统文件
+.idea/
+.mimosa/
+*.stackdump
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+tsconfig.tsbuildinfo
+.playwright-mcp/
+
+# 会话截图产物
+.screenshots/

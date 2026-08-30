@@ -1,0 +1,205 @@
+/* Hallmark · modern-minimal · Apple-like clarity · lime anchor · Workbench + side drawer · pre-emit critique: P5 H5 E5 S5 R5 V4 · contrast: pass (40–41) · nav: N2 · footer: none · slop: pass (42–45) · mobile: pass (34,49–57) */
+@import "../tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 她测工作台 · 视觉规则见 design.md */
+:root {
+  color-scheme: light;
+  --surface-page: #f5f5f7;
+  --surface-card: #ffffff;
+  --surface-muted: #f9f9fb;
+  --border-subtle: #e5e5ea;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --accent: var(--color-brand-lime);
+  --radius-control: 0.875rem;
+  --radius-card: 1.375rem;
+  --radius-panel: 1.625rem;
+  --shadow-surface: 0 1px 2px rgb(0 0 0 / 0.035), 0 10px 30px rgb(0 0 0 / 0.05);
+  --shadow-raised: 0 2px 4px rgb(0 0 0 / 0.05), 0 18px 42px rgb(0 0 0 / 0.09);
+}
+
+html,
+body {
+  overflow-x: clip;
+  overscroll-behavior-y: none;
+}
+
+body {
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+  @apply antialiased;
+}
+
+::selection {
+  background: rgb(224 255 133);
+  color: #17151c;
+}
+
+.puff-swim-zone {
+  --puff-travel: 200px;
+  pointer-events: none;
+}
+
+.puff-swimmer {
+  pointer-events: auto;
+  transform-origin: center;
+}
+
+.puff-swim-zone:hover .puff-swimmer,
+.puff-swimmer:focus-visible,
+.puff-swim-zone:hover .puff-mascot-image,
+.puff-swimmer:focus-visible .puff-mascot-image {
+  animation-play-state: paused;
+}
+
+@media (min-width: 640px) {
+  .puff-swim-zone {
+    --puff-travel: 292px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .puff-swimmer {
+    animation: puff-patrol 15s ease-in-out infinite;
+  }
+
+  .puff-mascot-image {
+    animation: puff-mascot-breathe 900ms ease-in-out infinite alternate;
+    transform-origin: 66% 52%;
+  }
+}
+
+@keyframes puff-patrol {
+  0% { transform: translate3d(0, 5px, 0) scaleX(1); }
+  14% { transform: translate3d(calc(var(--puff-travel) * -0.24), -7px, 0) scaleX(1); }
+  31% { transform: translate3d(calc(var(--puff-travel) * -0.58), 4px, 0) scaleX(1); }
+  47% { transform: translate3d(calc(var(--puff-travel) * -1), -4px, 0) scaleX(1); }
+  49% { transform: translate3d(calc(var(--puff-travel) * -1), -4px, 0) scaleX(-1); }
+  65% { transform: translate3d(calc(var(--puff-travel) * -0.66), 6px, 0) scaleX(-1); }
+  83% { transform: translate3d(calc(var(--puff-travel) * -0.28), -6px, 0) scaleX(-1); }
+  98%, 100% { transform: translate3d(0, 5px, 0) scaleX(-1); }
+}
+
+@keyframes puff-mascot-breathe {
+  from { transform: rotate(-0.8deg) scaleX(0.985) translateY(1px); }
+  to { transform: rotate(0.8deg) scaleX(1.015) translateY(-1px); }
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.review-workbench {
+  overflow-anchor: none;
+}
+
+.apple-surface {
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-surface);
+}
+
+.apple-panel {
+  border-radius: var(--radius-panel);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-raised);
+}
+
+.layer-box {
+  @apply absolute cursor-pointer border-2;
+  transition-property: border-color, background-color, box-shadow, transform, filter;
+  transition-duration: 150ms;
+}
+
+.layer-box:hover {
+  transform: scale(1.012);
+  filter: brightness(1.07);
+  z-index: 5;
+}
+
+.layer-box--risk {
+  @apply border-layer-risk bg-layer-risk/10;
+}
+
+.layer-box--evidence {
+  @apply border-layer-evidence bg-layer-evidence/10;
+}
+
+.layer-box--protected {
+  @apply border-layer-protected bg-layer-protected/10;
+}
+
+.layer-box--unconfirmed {
+  @apply border-layer-unconfirmed bg-layer-unconfirmed/10 border-dashed;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-neutral-300;
+}
+
+.canvas-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.7) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.7) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* 点阵加载：节奏取自 Dot Matrix 的 Row Sweep，减少常见 AI 旋转光环感。 */
+.dot-matrix-loader {
+  display: grid;
+  grid-template-columns: repeat(3, 5px);
+  gap: 3px;
+  width: max-content;
+}
+
+.dot-matrix-loader > span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.25;
+  animation: dot-row-sweep 1.15s ease-in-out infinite;
+}
+
+.dot-matrix-loader--compact {
+  grid-template-columns: repeat(3, 4px);
+  gap: 2px;
+}
+
+.dot-matrix-loader--compact > span {
+  width: 4px;
+  height: 4px;
+}
+
+@keyframes dot-row-sweep {
+  0%, 70%, 100% { opacity: 0.22; transform: scale(0.78); }
+  28% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes route-progress {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(420%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

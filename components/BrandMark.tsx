@@ -1,0 +1,27 @@
+/**
+ * 她测抽象品牌标识：两条柔和弧带围出观察空间。
+ * 白色杏仁形代表被看清的事实，橙红焦点代表待核查风险。
+ */
+export default function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} aria-hidden focusable="false">
+      <path
+        fill="none"
+        stroke="#292b33"
+        strokeWidth="4.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.8 17.2C5.3 13.1 7.1 9.1 10.3 6.5c3.7-3 9.7-2.7 13.2.9"
+      />
+      <path
+        fill="#c8ff19"
+        d="M6.8 26.1c4.1-4 6.4-3.7 9.7-3.6 5 .1 10.1-3.5 10.5-8.9.3-3.9-2.7-6.2-6.1-5-3.6 1.2-5.5 3.8-8.2 7-1.8 2.2-3.3 4.2-4.4 6.1-.9 1.6-2.2 3-2.8 3.6-.5.6.6 1.5 1.3.8Z"
+      />
+      <path
+        fill="#ffffff"
+        d="M9.3 16.1c2.8-3.6 6.2-5.7 10.8-6.6 3.2.5 4.4 2.8 2.5 5.6-2.1 3.1-5.4 5.4-9.5 5.2-2.6-.1-4-2-3.8-4.2Z"
+      />
+      <rect x="14.3" y="13" width="5" height="5" rx="1.35" fill="#ff4f2f" />
+    </svg>
+  );
+}

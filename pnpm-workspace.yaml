@@ -1,0 +1,18 @@
+# pnpm 11 的设置位置：package.json 里的 pnpm.onlyBuiltDependencies 已废弃不再被读取。
+# allowBuilds（包名 → 布尔映射）是 pnpm 11 放行依赖安装脚本的开关；
+# 此前脚本被默认拦截，导致 @prisma/client 未生成、原生库未就绪（截图上传/网站抓取全挂）。
+# 放行清单：
+# - prisma / @prisma/client / @prisma/engines：生成客户端与下载 query engine（lib/db.ts 必需）
+# - sharp：截图压缩管线（lib/parsers/image.ts）
+# - tesseract.js：OCR 原生/WASM 资源（lib/parsers/ocr.ts）
+# - esbuild / unrs-resolver：平台二进制
+# 注意：playwright 不在此列（其 postinstall 会下载全部三套浏览器，过重）；
+# Chromium 由根 package.json 的 postinstall 脚本按需安装（仅 chromium）。
+allowBuilds:
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true
+  sharp: true
+  tesseract.js: true
+  esbuild: true
+  unrs-resolver: true
